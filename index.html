@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Планшет ГИС</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#f3f4f6;--card:#ffffff;--ink:#1e2530;--muted:#5b6573;--line:#d3d8df;--accent:#1f4e79;--accent-ink:#ffffff;--plot:#fdfdfd;--grid:#e6e9ee;--warn:#fff4d6;--warn-ink:#5a4300;--err:#fde4e1;--err-ink:#7a1d12;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161c;--card:#1a2029;--ink:#e6eaf0;--muted:#98a3b3;--line:#303a47;--accent:#6aa6df;--accent-ink:#0b1622;--plot:#151b23;--grid:#26303b;--warn:#3a2f10;--warn-ink:#f2dc9b;--err:#3d1b17;--err-ink:#f6b9b0}}
+:root[data-theme="dark"]{--bg:#12161c;--card:#1a2029;--ink:#e6eaf0;--muted:#98a3b3;--line:#303a47;--accent:#6aa6df;--accent-ink:#0b1622;--plot:#151b23;--grid:#26303b;--warn:#3a2f10;--warn-ink:#f2dc9b;--err:#3d1b17;--err-ink:#f6b9b0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:14px clamp(12px,3vw,24px) 40px}
+header{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;justify-content:space-between;margin-bottom:12px}
+h1{margin:0;font-size:1.35rem;font-weight:600;letter-spacing:-.01em}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:inherit;display:inline-flex;align-items:center;min-height:38px;padding:0 14px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font-weight:500;cursor:pointer}
+.btn.sec{background:transparent;color:var(--accent)}
+.btn:focus-within,.btn:focus-visible,input[type=number]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px clamp(12px,2vw,18px);margin-bottom:12px}
+#info{display:flex;flex-wrap:wrap;gap:4px 22px;font-size:.88rem;color:var(--muted)}#info b{color:var(--ink);font-weight:600}
+.iv{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.iv label{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--muted)}
+input[type=number]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 10px;width:130px;min-height:38px}
+.thick{display:flex;flex-direction:column;font-size:.85rem;color:var(--muted)}.thick output{font-size:1.15rem;font-weight:600;color:var(--ink);min-height:38px;display:flex;align-items:center}
+#ivmsg{margin:8px 0 0;font-size:.85rem;color:var(--err-ink);min-height:1.2em}
+.notice{border-radius:6px;padding:8px 14px;margin:0 0 12px;background:var(--warn);color:var(--warn-ink)}.notice.err{background:var(--err);color:var(--err-ink)}.notice p{margin:4px 0}
+.plotwrap{overflow-x:auto}
+#plot{min-width:620px;width:100%;height:max(540px,calc(100dvh - 300px))}
+.hint{margin:8px 0 0;font-size:.82rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:640px){h1{font-size:1.15rem}}
+
+.plot-error{margin:24px;padding:12px 16px;border-radius:6px;background:var(--err);color:var(--err-ink)}
+
+.thr{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.thr label{font-weight:500}
+.thr input[type=range]{flex:1 1 240px;max-width:520px;min-height:28px;accent-color:var(--accent)}
+.thr output{min-width:64px;font-weight:600}
+.lg{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
+.sw{display:inline-block;width:14px;height:14px;border-radius:2px;border:1px solid var(--line)}
+.sw.yel{background:rgba(240,198,52,.85)}.sw.gry{background:rgba(138,146,157,.6)}
+.coltop{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:8px}
+.coltop h2{margin:0;font-size:1.05rem;font-weight:600}
+.scroll{overflow-x:auto;max-width:100%}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:7px 12px;border-bottom:1px solid var(--line);text-align:left}
+th{font-weight:600;color:var(--muted);font-size:.82rem;white-space:nowrap}
+td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.hint ul{margin:4px 0 0;padding-left:20px}
+.muted{color:var(--muted)}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Планшет ГИС</h1>
+  <div class="btns">
+    <label class="btn"><input type="file" id="lasFile" class="vh" accept=".las,.LAS,.txt">Открыть LAS 2.0</label>
+    <button class="btn sec" id="btnExample" type="button">Пример (300 строк)</button>
+  </div>
+</header>
+<div id="notice" role="status" hidden></div>
+<section class="card" aria-label="Сведения о данных"><div id="info"></div></section>
+<section class="card" aria-label="Интервал">
+  <div class="iv">
+    <label for="top">Кровля, м<input id="top" type="number" step="any" inputmode="decimal"></label>
+    <label for="base">Подошва, м<input id="base" type="number" step="any" inputmode="decimal"></label>
+    <div class="thick">Мощность<output id="thick" for="top base">—</output></div>
+    <button class="btn" id="btnZoom" type="button">Показать интервал</button>
+    <button class="btn sec" id="btnFull" type="button">Весь разрез</button>
+  </div>
+  <p id="ivmsg" role="status"></p>
+</section>
+<section class="card" aria-label="Порог GR">
+  <div class="thr">
+    <label for="thr">Порог GR</label>
+    <input id="thr" type="range" min="0" max="150" step="1" value="60">
+    <output id="thrOut" for="thr">60 API</output>
+    <span class="lg"><span class="sw yel"></span>GR ниже порога</span>
+    <span class="lg"><span class="sw gry"></span>GR выше порога</span>
+  </div>
+</section>
+<section class="card">
+  <div class="plotwrap"><div id="plot"></div></div>
+  <p class="hint">Глубина растёт вниз. Значения -999.25 не рисуются, линия в этих местах разрывается. Выделить область по глубине можно мышью, двойной щелчок возвращает весь разрез. <span id="empty"></span></p>
+</section>
+<section class="card" aria-label="Коллекторы">
+  <div class="coltop"><h2 id="colTitle">Коллекторы</h2><button class="btn" id="btnCsv" type="button">Скачать CSV</button></div>
+  <div class="scroll" id="colTable"></div>
+  <p id="colSum" class="hint"></p>
+  <div id="colNotes" class="hint"></div>
+  <p id="csvMsg" class="hint" role="status"></p>
+  <p class="hint">Коллектор здесь — непрерывная серия отсчётов с GR ниже порога. Границы определяются линейной интерполяцией GR до порога между соседними отсчётами. Пропуски -999.25 в расчёт не входят. Средний GR — среднее по отсчётам внутри интервала.</p>
+</section>
+</div>
+
+<script>
+const EXAMPLE_LAS = `~VERSION INFORMATION
+VERS.   2.0                 : CWLS LOG ASCII STANDARD - VERSION 2.0
+WRAP.   NO                  : ONE LINE PER DEPTH STEP
+~WELL INFORMATION
+STRT.M      1515.0            : START DEPTH
+STOP.M      1664.5            : STOP DEPTH
+STEP.M      0.5               : STEP (every 5th row of well 1)
+NULL.       -999.25          : NULL VALUE
+WELL.       SKVAZHINA 1 (EXAMPLE 300 ROWS) : WELL
+~CURVE INFORMATION
+DEPT.M       : Depth
+GR  .API     : Gamma Ray
+RHOB.G/CC    : Bulk Density
+NPHI.V/V     : Neutron Porosity
+RT  .OHMM    : True Resistivity
+~ASCII
+1515.0 119.04 2.5162 0.4055 3.096
+1515.5 121.39 2.5328 0.4035 2.861
+1516.0 121.60 2.5160 0.4054 3.100
+1516.5 123.43 2.5216 0.4080 2.932
+1517.0 119.30 2.5010 0.4047 3.161
+1517.5 120.71 2.5115 0.3911 3.110
+1518.0 117.88 2.5135 0.4031 2.998
+1518.5 120.46 2.5222 0.4048 3.218
+1519.0 120.47 2.5159 0.4103 3.011
+1519.5 119.91 2.5166 0.4063 3.095
+1520.0 121.09 2.5177 0.4054 3.205
+1520.5 120.53 2.5197 0.4073 3.080
+1521.0 119.86 2.5075 0.4043 2.933
+1521.5 120.16 2.5257 0.3979 3.033
+1522.0 124.15 2.5109 0.4043 3.031
+1522.5 119.20 2.5075 0.4004 3.219
+1523.0 120.59 2.5064 0.3926 3.094
+1523.5 118.90 2.4968 0.4097 3.053
+1524.0 121.67 2.5221 0.3982 3.235
+1524.5 120.96 2.5192 0.3965 3.159
+1525.0 123.32 2.4913 0.4076 3.302
+1525.5 121.35 2.5257 0.3878 3.170
+1526.0 119.29 2.5187 0.3987 2.976
+1526.5 120.80 2.5194 0.3936 3.105
+1527.0 120.60 2.5233 0.4015 3.106
+1527.5 121.45 2.5119 0.4096 3.063
+1528.0 120.87 2.5119 0.4046 3.050
+1528.5 123.56 2.5224 0.4033 3.102
+1529.0 122.20 2.5188 0.4067 3.027
+1529.5 119.19 2.5192 0.4036 3.105
+1530.0 76.65 2.4352 0.3358 13.935
+1530.5 26.11 2.3391 0.2490 64.382
+1531.0 26.93 2.3470 0.2570 61.576
+1531.5 -999.25 -999.2500 -999.2500 -999.250
+1532.0 -999.25 -999.2500 -999.2500 -999.250
+1532.5 29.10 2.3500 0.2492 70.639
+1533.0 75.52 2.4136 0.3346 14.602
+1533.5 120.74 2.5284 0.4051 3.060
+1534.0 120.77 2.5277 0.4057 2.970
+1534.5 122.22 2.5070 0.3995 3.037
+1535.0 121.79 2.4963 0.3939 3.178
+1535.5 120.27 2.5136 0.4049 3.183
+1536.0 118.56 2.5109 0.4013 2.911
+1536.5 118.84 2.5001 0.4107 3.140
+1537.0 122.01 2.5066 0.4034 2.939
+1537.5 119.90 2.5123 0.4002 3.095
+1538.0 121.74 2.5027 0.3998 3.061
+1538.5 119.01 2.5086 0.4022 2.971
+1539.0 120.53 2.5267 0.4104 3.075
+1539.5 122.99 2.5009 0.4076 2.779
+1540.0 119.63 2.5249 0.4041 2.955
+1540.5 121.55 2.5037 0.3931 3.067
+1541.0 122.35 2.5082 0.4005 3.230
+1541.5 121.60 2.5164 0.3901 3.249
+1542.0 120.44 2.5367 0.4056 3.091
+1542.5 121.53 2.5116 0.4016 3.053
+1543.0 121.06 2.5165 0.3993 3.125
+1543.5 120.92 2.5058 0.4027 3.058
+1544.0 119.28 2.5096 0.4030 3.110
+1544.5 119.52 2.5121 0.3985 3.112
+1545.0 121.89 2.5161 0.4046 2.842
+1545.5 124.85 2.5304 0.4028 3.050
+1546.0 120.87 2.5149 0.4132 3.089
+1546.5 121.96 2.5224 0.3976 2.960
+1547.0 120.50 2.5335 0.4002 3.201
+1547.5 118.72 2.5203 0.4095 3.459
+1548.0 116.51 2.5232 0.4075 3.105
+1548.5 121.66 2.5110 0.4020 3.144
+1549.0 122.14 2.5111 0.4079 2.985
+1549.5 123.40 2.5141 0.4049 3.228
+1550.0 76.37 2.3972 0.3086 15.446
+1550.5 29.91 2.2767 0.2188 78.407
+1551.0 -999.25 -999.2500 -999.2500 -999.250
+1551.5 -999.25 -999.2500 -999.2500 -999.250
+1552.0 27.18 2.2637 0.2009 80.000
+1552.5 28.56 2.2541 0.2130 74.104
+1553.0 74.13 2.3887 0.3122 15.073
+1553.5 119.63 2.5187 0.3986 3.150
+1554.0 122.31 2.5083 0.3846 2.970
+1554.5 121.24 2.5340 0.4129 3.282
+1555.0 121.24 2.5189 0.3976 2.882
+1555.5 121.50 2.5079 0.4078 3.112
+1556.0 122.03 2.5238 0.4061 3.128
+1556.5 123.37 2.5092 0.4123 3.191
+1557.0 119.04 2.5093 0.4009 3.074
+1557.5 118.30 2.5115 0.4033 3.173
+1558.0 120.00 2.5087 0.3967 3.085
+1558.5 121.77 2.5025 0.4150 3.085
+1559.0 119.75 2.5104 0.3862 3.088
+1559.5 123.14 2.5104 0.4028 3.273
+1560.0 121.66 2.5146 0.3998 3.061
+1560.5 117.34 2.5166 0.3936 3.036
+1561.0 120.49 2.5255 0.3842 3.117
+1561.5 121.75 2.5205 0.3994 3.023
+1562.0 120.45 2.5146 0.4027 3.104
+1562.5 120.37 2.5074 0.4090 2.990
+1563.0 121.84 2.5111 0.3978 3.066
+1563.5 120.47 2.5078 0.4009 2.775
+1564.0 120.84 2.5168 0.4109 3.194
+1564.5 117.11 2.5214 0.4004 2.949
+1565.0 122.21 2.5188 0.4053 3.043
+1565.5 120.71 2.5257 0.4036 2.926
+1566.0 120.31 2.5170 0.3953 2.961
+1566.5 120.32 2.5056 0.4048 2.943
+1567.0 119.72 2.5235 0.4073 3.035
+1567.5 120.66 2.5227 0.4001 2.932
+1568.0 122.53 2.5144 0.4056 3.050
+1568.5 121.93 2.5154 0.3997 3.115
+1569.0 120.64 2.5164 0.4082 3.123
+1569.5 119.42 2.5172 0.3976 3.021
+1570.0 78.03 2.4167 0.3118 8.874
+1570.5 36.20 2.3141 0.2226 25.566
+1571.0 38.29 2.3202 0.2197 26.973
+1571.5 34.51 2.3166 0.2237 25.113
+1572.0 38.03 2.3327 0.2289 26.600
+1572.5 36.54 2.3265 0.2258 25.092
+1573.0 82.10 2.4100 0.3147 8.528
+1573.5 121.62 2.5103 0.4200 3.055
+1574.0 121.47 2.5103 0.3971 3.086
+1574.5 123.48 2.5236 0.3871 3.096
+1575.0 120.98 2.5369 0.3979 3.080
+1575.5 119.00 2.5279 0.4104 2.953
+1576.0 120.98 2.5166 0.3951 3.013
+1576.5 120.73 2.5277 0.3844 3.136
+1577.0 118.28 2.5212 0.4051 3.140
+1577.5 121.02 2.5138 0.4063 3.077
+1578.0 122.89 2.5167 0.4149 3.000
+1578.5 121.28 2.5108 0.4007 3.098
+1579.0 120.02 2.5115 0.4143 3.085
+1579.5 119.25 2.5035 0.3990 3.396
+1580.0 118.17 2.5149 0.4003 2.791
+1580.5 116.95 2.5085 0.3913 3.208
+1581.0 119.83 2.5150 0.3909 3.028
+1581.5 120.45 2.5145 0.3970 3.185
+1582.0 121.15 2.5075 0.4084 2.780
+1582.5 122.41 2.5146 0.4018 3.090
+1583.0 121.38 2.5284 0.3942 3.303
+1583.5 121.96 2.5041 0.4066 3.289
+1584.0 119.92 2.5058 0.3976 3.110
+1584.5 120.89 2.5011 0.4041 3.067
+1585.0 118.12 2.4979 0.4087 3.033
+1585.5 120.92 2.5183 0.4047 3.192
+1586.0 119.32 2.5183 0.4044 2.967
+1586.5 118.40 2.5093 0.3942 2.926
+1587.0 120.49 2.5061 0.4067 2.947
+1587.5 118.65 2.5113 0.4035 3.003
+1588.0 120.02 2.5162 0.4077 3.097
+1588.5 119.34 2.5120 0.4060 3.178
+1589.0 122.44 2.5314 0.3927 3.041
+1589.5 118.14 2.5101 0.4080 3.067
+1590.0 78.28 2.3699 0.3401 12.829
+1590.5 36.21 2.2036 0.2573 54.468
+1591.0 36.56 2.2000 0.2643 53.042
+1591.5 37.39 2.2227 0.2596 53.014
+1592.0 36.53 2.2114 0.2711 55.889
+1592.5 30.62 2.2002 0.2578 56.319
+1593.0 35.02 2.2014 0.2632 55.581
+1593.5 36.70 2.2000 0.2665 53.740
+1594.0 36.04 2.2000 0.2603 51.589
+1594.5 36.14 2.2178 0.2543 51.740
+1595.0 34.59 2.2121 0.2637 55.383
+1595.5 36.76 2.2089 0.2639 53.256
+1596.0 79.09 2.3591 0.3352 13.337
+1596.5 120.23 2.5210 0.4026 3.058
+1597.0 120.79 2.5097 0.4010 2.966
+1597.5 122.19 2.5258 0.4012 3.004
+1598.0 120.96 2.5121 0.3931 2.903
+1598.5 121.53 2.5347 0.3954 3.043
+1599.0 119.39 2.5113 0.3974 3.153
+1599.5 121.89 2.5060 0.4096 3.019
+1600.0 117.80 2.5159 0.4023 3.117
+1600.5 122.53 2.5150 0.4080 3.102
+1601.0 120.17 2.5197 0.4073 2.992
+1601.5 121.97 2.5259 0.3981 2.837
+1602.0 119.81 2.5128 0.4085 3.183
+1602.5 121.61 2.5238 0.4039 3.157
+1603.0 118.89 2.5067 0.4014 3.022
+1603.5 121.63 2.5253 0.4078 3.170
+1604.0 119.99 2.5159 0.3903 2.836
+1604.5 120.84 2.5227 0.4027 3.047
+1605.0 119.59 2.5090 0.4055 3.051
+1605.5 123.11 2.5121 0.3992 3.075
+1606.0 121.12 2.5217 0.3972 3.015
+1606.5 120.54 2.5257 0.4059 3.197
+1607.0 119.97 2.5068 0.4095 3.087
+1607.5 122.82 2.5077 0.4127 3.163
+1608.0 119.31 2.5162 0.4084 3.135
+1608.5 122.22 2.5177 0.4016 3.240
+1609.0 121.11 2.5218 0.4079 2.954
+1609.5 119.48 2.5185 0.3945 2.895
+1610.0 120.68 2.5203 0.4059 2.995
+1610.5 117.81 2.5212 0.4031 3.069
+1611.0 120.71 2.5068 0.4055 3.024
+1611.5 120.96 2.5143 0.3858 2.982
+1612.0 120.98 2.5188 0.4125 3.163
+1612.5 122.50 2.5180 0.4025 3.245
+1613.0 122.00 2.5096 0.3991 3.123
+1613.5 118.83 2.5154 0.3942 3.041
+1614.0 119.48 2.5186 0.3917 3.113
+1614.5 120.41 2.5243 0.4025 3.050
+1615.0 120.83 2.5017 0.4157 3.079
+1615.5 121.58 2.5079 0.4026 3.038
+1616.0 120.94 2.5049 0.4067 3.181
+1616.5 120.75 2.5045 0.4061 3.220
+1617.0 123.86 2.5243 0.4035 3.069
+1617.5 119.37 2.5112 0.4002 3.159
+1618.0 119.98 2.5131 0.3942 3.188
+1618.5 121.40 2.5162 0.4075 3.114
+1619.0 116.98 2.5196 0.3983 3.047
+1619.5 122.95 2.5272 0.3912 3.164
+1620.0 119.61 2.5111 0.4033 3.160
+1620.5 121.81 2.5122 0.3935 2.956
+1621.0 121.45 2.5202 0.3977 3.097
+1621.5 123.29 2.5247 0.3988 3.145
+1622.0 122.53 2.5185 0.4200 3.145
+1622.5 118.62 2.5250 0.4116 2.975
+1623.0 119.87 2.5186 0.4060 3.004
+1623.5 120.23 2.5167 0.4085 3.235
+1624.0 120.88 2.5190 0.3940 3.169
+1624.5 121.85 2.5245 0.4097 2.917
+1625.0 120.02 2.5068 0.4038 3.061
+1625.5 120.63 2.5298 0.4053 3.251
+1626.0 121.05 2.5239 0.3974 3.289
+1626.5 122.19 2.5141 0.3976 3.068
+1627.0 121.34 2.5208 0.3986 3.062
+1627.5 119.51 2.5202 0.3982 3.024
+1628.0 120.58 2.5200 0.4038 2.876
+1628.5 120.44 2.5118 0.3968 3.094
+1629.0 121.81 2.5227 0.4076 3.071
+1629.5 122.74 2.5030 0.3939 3.279
+1630.0 121.30 2.5181 0.4152 3.037
+1630.5 122.07 2.5160 0.4054 3.047
+1631.0 121.58 2.5136 0.4078 2.968
+1631.5 120.64 2.5130 0.4042 3.068
+1632.0 119.41 2.5140 0.3959 3.049
+1632.5 120.79 2.5164 0.4048 2.840
+1633.0 123.83 2.4942 0.3914 3.048
+1633.5 120.58 2.5154 0.4039 3.035
+1634.0 120.39 2.5056 0.3997 3.150
+1634.5 122.40 2.5138 0.4049 2.926
+1635.0 120.92 2.5110 0.4030 2.869
+1635.5 123.17 2.5176 0.3990 3.102
+1636.0 118.33 2.5192 0.3955 3.117
+1636.5 119.58 2.5072 0.3945 3.001
+1637.0 118.15 2.5206 0.4057 3.206
+1637.5 118.84 2.5190 0.4074 2.914
+1638.0 120.09 2.5059 0.3935 3.021
+1638.5 121.73 2.4983 0.4108 3.034
+1639.0 123.01 2.5164 0.4067 3.000
+1639.5 121.00 2.5159 0.3958 3.161
+1640.0 121.23 2.5188 0.3989 3.051
+1640.5 122.08 2.5030 0.4049 3.276
+1641.0 121.31 2.5200 0.3995 3.106
+1641.5 122.64 2.5317 0.3951 3.158
+1642.0 120.74 2.5132 0.3934 3.250
+1642.5 120.07 2.5032 0.3978 3.188
+1643.0 123.16 2.5091 0.3919 3.022
+1643.5 121.49 2.5166 0.4021 3.225
+1644.0 122.44 2.5323 0.4079 3.198
+1644.5 118.31 2.5035 0.4002 3.015
+1645.0 120.67 2.5207 0.3977 3.115
+1645.5 123.52 2.5118 0.3998 3.107
+1646.0 122.12 2.5245 0.4145 3.213
+1646.5 121.23 2.5061 0.3889 2.940
+1647.0 120.43 2.5155 0.3994 3.119
+1647.5 119.19 2.5139 0.3897 3.024
+1648.0 120.64 2.5290 0.4000 2.995
+1648.5 121.16 2.5199 0.4031 3.130
+1649.0 118.43 2.5134 0.4035 3.071
+1649.5 118.06 2.5100 0.4069 3.146
+1650.0 79.92 2.3971 0.3428 15.229
+1650.5 41.09 2.2657 0.2800 68.300
+1651.0 43.17 2.2425 0.2717 73.468
+1651.5 42.44 2.2546 0.2793 71.360
+1652.0 42.21 2.2480 0.2800 71.867
+1652.5 40.76 2.2472 0.2761 72.908
+1653.0 38.10 2.2512 0.2785 77.096
+1653.5 39.94 2.2589 0.2800 70.213
+1654.0 38.75 2.2666 0.2800 73.295
+1654.5 37.78 2.2590 0.2750 70.917
+1655.0 37.98 2.2380 0.2795 72.453
+1655.5 40.68 2.2583 0.2800 74.479
+1656.0 39.98 2.2694 0.2737 69.752
+1656.5 39.48 2.2528 0.2781 72.863
+1657.0 40.73 2.2731 0.2759 69.445
+1657.5 38.56 2.2609 0.2800 75.031
+1658.0 39.69 2.2596 0.2758 69.215
+1658.5 39.59 2.2583 0.2729 76.023
+1659.0 39.14 2.2601 0.2764 74.973
+1659.5 39.02 2.2558 0.2782 72.039
+1660.0 80.85 2.4007 0.3425 13.997
+1660.5 122.58 2.5216 0.4121 3.045
+1661.0 121.38 2.5055 0.4057 3.175
+1661.5 120.65 2.5034 0.3919 2.932
+1662.0 118.72 2.5040 0.3939 3.267
+1662.5 119.92 2.5273 0.3945 3.090
+1663.0 120.60 2.5186 0.3913 3.041
+1663.5 121.15 2.5160 0.4045 3.016
+1664.0 122.75 2.5032 0.4049 3.007
+1664.5 119.91 2.5197 0.4053 3.223
+`;
+/* ===== Планшет ГИС ===== */
+const $ = id => document.getElementById(id);
+const fmt = (x, d = 1) => Number.isFinite(x) ? x.toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false }) : '—';
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const ALIASES = { GR: ['GR', 'GRC', 'GAMMA'], RHOB: ['RHOB', 'RHOZ', 'DEN'], NPHI: ['NPHI', 'NPOR', 'TNPH', 'CNL'], RT: ['RT', 'RILD', 'ILD', 'LLD', 'RDEP', 'RES'] };
+const CURVES = ['GR', 'RT', 'RHOB', 'NPHI'];
+const median = a => { const v = a.filter(Number.isFinite).sort((x, y) => x - y); if (!v.length) return NaN; const k = (v.length - 1) / 2; return (v[Math.floor(k)] + v[Math.ceil(k)]) / 2; };
+
+/* ---- разбор LAS 2.0 ---- */
+function parseLAS(text, fileName) {
+  const warnings = [], lines = text.split(/\r?\n/);
+  let sec = '', curves = [], nullv = -999.25, name = '', depthUnit = 'M';
+  const rows = [], re = /^\s*([^\s.:]+)\s*\.([^\s:]*)\s*([^:]*?)\s*:\s*(.*)$/;
+  for (const raw of lines) {
+    const l = raw.trim();
+    if (!l || l[0] === '#') continue;
+    if (l[0] === '~') { sec = l[1].toUpperCase(); continue; }
+    if (sec === 'A') { const p = l.split(/\s+/).map(Number); if (p.length && p.every(x => !isNaN(x))) rows.push(p); continue; }
+    const m = re.exec(l); if (!m) continue;
+    const mn = m[1].toUpperCase(), unit = m[2], val = m[3];
+    if (sec === 'W') {
+      if (mn === 'NULL') { const v = parseFloat(val); if (!isNaN(v)) nullv = v; }
+      if (mn === 'WELL') name = val.trim();
+      if (mn === 'STRT' && unit) depthUnit = unit.toUpperCase();
+    }
+    if (sec === 'C') curves.push({ mn, unit: unit.toUpperCase() });
+  }
+  if (!curves.length || !rows.length) throw new Error('Не найдены секции ~C (кривые) или ~A (данные). Нужен LAS 2.0 с WRAP = NO.');
+  const ft = /^(F|FT|FEET)$/.test(depthUnit) || /^(F|FT|FEET)$/.test(curves[0].unit);
+  if (ft) warnings.push('Глубина в футах: пересчитана в метры (×0,3048). Нужно подтвердить.');
+  const idx = {}, found = {};
+  for (const k of CURVES) { idx[k] = curves.findIndex((c, j) => j > 0 && ALIASES[k].includes(c.mn)); found[k] = idx[k] >= 0; }
+  if (!CURVES.some(k => found[k])) throw new Error('Не найдено ни одной из кривых GR, RT, RHOB, NPHI (проверьте мнемоники).');
+  for (const k of CURVES) if (!found[k]) warnings.push('Кривая ' + k + ' не найдена: её трек пуст.');
+  if (!/^(DEPT|DEPTH|MD)/.test(curves[0].mn)) warnings.push('Первая колонка называется ' + curves[0].mn + ', принята за глубину. Нужно подтвердить.');
+  const depth = rows.map(r => r[0] * (ft ? 0.3048 : 1));
+  for (let i = 1; i < depth.length; i++) if (!(depth[i] > depth[i - 1])) { warnings.push('Глубина не строго возрастает (дубли или обратный порядок): линия может быть искажена. Нужно подтвердить.'); break; }
+  const diffs = []; for (let i = 1; i < depth.length; i++) diffs.push(depth[i] - depth[i - 1]);
+  const step = depth.length > 1 ? median(diffs) : NaN;
+  const nulls = {}, data = {};
+  for (const k of CURVES) {
+    nulls[k] = 0;
+    data[k] = idx[k] < 0 ? depth.map(() => null) : rows.map(r => {
+      const v = r[idx[k]];
+      if (v === nullv || v <= -999 || !isFinite(v)) { nulls[k]++; return null; }
+      return v;
+    });
+  }
+  const mx = a => Math.max(...a.filter(v => v !== null));
+  if (found.NPHI && mx(data.NPHI) > 1.5) { data.NPHI = data.NPHI.map(v => v === null ? null : v / 100); warnings.push('NPHI похоже в процентах: поделён на 100 (V/V). Нужно подтвердить.'); }
+  if (found.RHOB && mx(data.RHOB) > 100) { data.RHOB = data.RHOB.map(v => v === null ? null : v / 1000); warnings.push('RHOB похоже в кг/м³: поделён на 1000 (G/CC). Нужно подтвердить.'); }
+  return { name: name || fileName || 'без названия', file: fileName, depth, data, nulls, found, step, rows: rows.length, warnings };
+}
+
+/* ---- состояние ---- */
+let D = null;            // текущие данные
+let view = null;         // [верх, низ] текущего масштаба по глубине
+const fieldVal = id => { const s = $(id).value.trim().replace(',', '.'); return s === '' ? NaN : parseFloat(s); };
+
+function setData(parsed, preset) {
+  D = parsed; view = [D.depth[0], D.depth[D.depth.length - 1]];
+  $('top').value = preset ? preset[0] : ''; $('base').value = preset ? preset[1] : '';
+  info(); draw(); updateBand(true);
+}
+function info() {
+  const d0 = D.depth[0], d1 = D.depth[D.depth.length - 1];
+  const nl = CURVES.filter(k => D.found[k]).map(k => `${k} ${D.nulls[k]}`).join(', ');
+  const tot = CURVES.reduce((s, k) => s + D.nulls[k], 0);
+  $('info').innerHTML = `<span><b>${D.name}</b>${D.file ? ' (' + D.file + ')' : ''}</span><span>Глубина ${fmt(d0)}–${fmt(d1)} м</span><span>Шаг ${fmt(D.step, 2)} м</span><span>Строк ${D.rows}</span><span>Пропуски -999.25: ${tot}${tot ? ' (' + nl + '), не рисуются' : ''}</span>`;
+}
+function notice(msgs, err) {
+  const n = $('notice'); n.hidden = !msgs.length; n.className = 'notice' + (err ? ' err' : '');
+  n.innerHTML = ''; msgs.forEach(m => { const p = document.createElement('p'); p.textContent = m; n.appendChild(p); });
+}
+
+/* ---- порог GR: заливка и коллекторы ---- */
+let thr = 60;
+const FILL_N = 5;   // число служебных трасс заливки перед кривыми (индексы 0..4)
+
+/* Данные для заливки: между кривой GR и линией порога. В точках пересечения порога вставляются
+   дополнительные отсчёты, пропуски (null) разрывают заливку. */
+function buildFill(depth, gr, t) {
+  const dep = [], thrA = [], low = [], high = [];
+  let prev = null;                       // предыдущий валидный отсчёт, если он идёт сразу перед текущим
+  for (let i = 0; i < depth.length; i++) {
+    const g = gr[i];
+    if (g === null) { dep.push(depth[i]); thrA.push(null); low.push(null); high.push(null); prev = null; continue; }
+    if (prev && (prev.g - t) * (g - t) < 0) {
+      const yc = prev.d + (t - prev.g) / (g - prev.g) * (depth[i] - prev.d);
+      dep.push(yc); thrA.push(t); low.push(t); high.push(t);
+    }
+    dep.push(depth[i]); thrA.push(t); low.push(Math.min(g, t)); high.push(Math.max(g, t));
+    prev = { d: depth[i], g };
+  }
+  return { dep, thrA, low, high };
+}
+
+/* Коллекторы: непрерывные серии отсчётов с GR < порога. Пропуски (-999.25) в расчёт не входят:
+   отсчёт-пропуск просто отсутствует, границы определяются линейной интерполяцией GR до порога
+   между ближайшими валидными отсчётами. */
+function findCollectors(depth, gr, t) {
+  const v = []; for (let i = 0; i < depth.length; i++) if (gr[i] !== null) v.push({ d: depth[i], g: gr[i] });
+  const diffs = []; for (let i = 1; i < v.length; i++) diffs.push(v[i].d - v[i - 1].d);
+  const step = diffs.length ? median(diffs) : NaN;
+  const out = [];
+  let i = 0;
+  while (i < v.length) {
+    if (!(v[i].g < t)) { i++; continue; }
+    let j = i; while (j + 1 < v.length && v[j + 1].g < t) j++;
+    const notes = [];
+    let top, base;
+    if (i === 0) { top = v[0].d; notes.push('кровля обрезана началом данных'); }
+    else { const a = v[i - 1], b = v[i]; top = a.d + (t - a.g) / (b.g - a.g) * (b.d - a.d); if (b.d - a.d > 1.5 * step) notes.push('кровля определена через пропуск или редкие отсчёты'); }
+    if (j === v.length - 1) { base = v[j].d; notes.push('подошва обрезана концом данных'); }
+    else { const a = v[j], b = v[j + 1]; base = a.d + (t - a.g) / (b.g - a.g) * (b.d - a.d); if (b.d - a.d > 1.5 * step) notes.push('подошва определена через пропуск или редкие отсчёты'); }
+    let sum = 0, n = 0; for (let k = i; k <= j; k++) { sum += v[k].g; n++; }
+    let gapN = 0; for (let k = 0; k < depth.length; k++) if (gr[k] === null && depth[k] > top && depth[k] < base) gapN++;
+    if (gapN) notes.push(`внутри ${gapN} ${gapN === 1 ? 'отсчёт-пропуск' : 'отсчётов-пропусков'}, значения не учтены`);
+    if (n === 1) notes.push('один отсчёт: мощность оценочная');
+    out.push({ top, base, h: base - top, gr: sum / n, n, notes });
+    i = j + 1;
+  }
+  return out;
+}
+
+function renderTable() {
+  if (!D) return;
+  const rows = findCollectors(D.depth, D.data.GR, thr);
+  $('colTitle').textContent = `Коллекторы по порогу GR < ${fmt(thr, 0)} API`;
+  const tot = rows.reduce((a, r) => a + r.h, 0);
+  if (!D.found.GR) { $('colTable').innerHTML = '<p class="muted">Кривая GR не найдена, коллекторы определить нельзя.</p>'; $('colSum').textContent = ''; $('colNotes').innerHTML = ''; $('btnCsv').disabled = true; return; }
+  $('colTable').innerHTML = rows.length
+    ? '<table><thead><tr><th>Кровля, м</th><th>Подошва, м</th><th>Мощность, м</th><th>Средний GR, API</th></tr></thead><tbody>' +
+      rows.map(r => `<tr><td class="num">${fmt(r.top)}</td><td class="num">${fmt(r.base)}</td><td class="num">${fmt(r.h)}</td><td class="num">${fmt(r.gr)}</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">При таком пороге GR ниже порога нигде нет.</p>';
+  $('colSum').textContent = rows.length ? `Интервалов: ${rows.length}, суммарная мощность ${fmt(tot)} м.` : '';
+  const withNotes = rows.map((r, i) => ({ i: i + 1, top: r.top, notes: r.notes })).filter(x => x.notes.length);
+  $('colNotes').innerHTML = '';
+  if (withNotes.length) {
+    const ul = document.createElement('ul');
+    withNotes.forEach(x => { const li = document.createElement('li'); li.textContent = `Строка ${x.i} (кровля ${fmt(x.top)} м): ${x.notes.join('; ')}.`; ul.appendChild(li); });
+    $('colNotes').appendChild(ul);
+  }
+  $('btnCsv').disabled = !rows.length;
+  $('csvMsg').textContent = '';
+}
+
+function fillSeries() {
+  const f = buildFill(D.depth, D.data.GR, thr);
+  return { x: [f.thrA, f.low, f.thrA, f.high, f.thrA], y: [f.dep, f.dep, f.dep, f.dep, f.dep] };
+}
+function applyThreshold() {
+  thr = +$('thr').value; $('thrOut').textContent = fmt(thr, 0) + ' API';
+  if (D) {
+    const pe = $('plot');
+    if (pe._fullLayout) { try { Plotly.restyle('plot', fillSeries(), [0, 1, 2, 3, 4]); } catch (e) { showPlotError('Ошибка отрисовки: ' + e.message); } }
+    renderTable();
+  }
+}
+
+/* ---- скачать CSV ---- */
+function csvText() {
+  const rows = findCollectors(D.depth, D.data.GR, thr), c = x => fmt(x, 1);
+  const lines = ['Кровля, м;Подошва, м;Мощность, м;Средний GR, API'].concat(rows.map(r => [c(r.top), c(r.base), c(r.h), c(r.gr)].join(';')));
+  return '\uFEFF' + lines.join('\r\n') + '\r\n';
+}
+async function saveCsv() {
+  if (!D) return;
+  const msg = t => { $('csvMsg').textContent = t; };
+  const filename = 'collectors_GR' + String(thr).replace('.', '_') + '.csv', data = csvText();
+  let dl = null;
+  try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (e) { dl = null; }
+  if (dl) {
+    try { await dl.save({ filename, data }); msg('Файл сохранён: ' + filename); }
+    catch (e) { msg(e && e.code === 'declined' ? 'Сохранение отменено.' : 'Не удалось сохранить файл (' + ((e && (e.code || e.message)) || 'ошибка') + ').'); }
+    return;
+  }
+  try {   // запасной путь: страница открыта как обычный файл
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data], { type: 'text/csv;charset=utf-8' })); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    msg('CSV отправлен на скачивание: ' + filename + '. Если файл не появился, откройте страницу в отдельной вкладке.');
+  } catch (e) { msg('Не удалось скачать файл: ' + e.message); }
+}
+
+/* ---- интервал: кровля / подошва ---- */
+function interval() {
+  const t = fieldVal('top'), b = fieldVal('base');
+  return { t, b, has: Number.isFinite(t) && Number.isFinite(b), ok: Number.isFinite(t) && Number.isFinite(b) && t < b };
+}
+function updateBand(silent) {
+  const iv = interval(), out = $('thick'), msg = $('ivmsg');
+  msg.textContent = ''; out.textContent = '—';
+  if (iv.has && !iv.ok) msg.textContent = 'Кровля должна быть меньше подошвы (глубина растёт вниз).';
+  else if (iv.ok) {
+    out.textContent = fmt(iv.b - iv.t) + ' м';
+    const d0 = D.depth[0], d1 = D.depth[D.depth.length - 1];
+    if (iv.t < d0 || iv.b > d1) msg.textContent = `Интервал выходит за границы данных (${fmt(d0)}–${fmt(d1)} м).`;
+  }
+  if (D) { try { Plotly.relayout('plot', bandLayout()); } catch (e) { } }
+}
+function bandLayout() {
+  const iv = interval(), acc = css('--accent');
+  if (!iv.ok) return { shapes: [], annotations: [] };
+  const doms = ['x domain', 'x2 domain', 'x3 domain'];
+  const shapes = doms.map(r => ({ type: 'rect', xref: r, yref: 'y', x0: 0, x1: 1, y0: iv.t, y1: iv.b, fillcolor: acc, opacity: .16, line: { color: acc, width: 1.2 }, layer: 'above' }));
+  const ann = (y, txt, va) => ({ xref: 'x3 domain', yref: 'y', x: 1, y, xanchor: 'right', yanchor: va, text: txt, showarrow: false, font: { size: 11, color: acc }, bgcolor: css('--card'), borderpad: 2 });
+  return { shapes, annotations: [ann(iv.t, 'кровля ' + fmt(iv.t) + ' м', 'bottom'), ann(iv.b, 'подошва ' + fmt(iv.b) + ' м', 'top')] };
+}
+function zoomToInterval() {
+  const iv = interval();
+  if (!iv.ok) { $('ivmsg').textContent = iv.has ? 'Кровля должна быть меньше подошвы.' : 'Введите кровлю и подошву в метрах.'; return; }
+  const m = Math.max(1, (iv.b - iv.t) * 0.15);
+  view = [iv.t - m, iv.b + m]; Plotly.relayout('plot', { 'yaxis.range': [view[1], view[0]] });
+}
+function fullView() { view = [D.depth[0], D.depth[D.depth.length - 1]]; Plotly.relayout('plot', { 'yaxis.range': [view[1], view[0]] }); }
+
+function showPlotError(msg) { const p = $('plot'); try { if (window.Plotly && p._fullLayout) Plotly.purge(p); } catch (e) { } p.textContent = ''; const d = document.createElement('p'); d.className = 'plot-error'; d.textContent = msg; p.appendChild(d); }
+
+/* ---- рисование ---- */
+function draw() {
+  if (!D) return;
+  const ink = css('--ink'), grid = css('--grid'), line = css('--line'), pbg = css('--plot');
+  const d = D.depth, n = d.length, mk = n <= 400 ? 'lines+markers' : 'lines';
+  const ms = { size: 4 };
+  const dom = [[0, .31], [.345, .655], [.69, 1]];
+  const ax = (i, title, extra) => Object.assign({ anchor: 'y', domain: dom[i], side: 'top', showline: true, linecolor: line, mirror: true, gridcolor: grid, zeroline: false, ticks: 'outside', ticklen: 3, tickfont: { size: 11 }, fixedrange: true, showgrid: true, title: { text: title, font: { size: 12 }, standoff: 6 } }, extra || {});
+  const nz = a => a.filter(v => v !== null);
+  let rtRange = [Math.log10(.5), Math.log10(200)];
+  const rtv = nz(D.data.RT).filter(v => v > 0);
+  if (rtv.length) rtRange = [Math.floor(Math.log10(Math.min(...rtv))), Math.ceil(Math.log10(Math.max(...rtv)))];
+  if (rtRange[0] === rtRange[1]) rtRange[1] += 1;
+  const grv = nz(D.data.GR); const grMax = grv.length ? Math.max(150, Math.ceil(Math.max(...grv) / 50) * 50) : 150;
+  const sl = $('thr'); sl.max = grMax; if (thr > grMax) { thr = grMax; sl.value = thr; } $('thrOut').textContent = fmt(thr, 0) + ' API';
+  const T = (k, x, color, name, tpl, xa, extra) => ({ x: D.data[k], y: d, xaxis: xa, yaxis: 'y', mode: mk, marker: ms, line: Object.assign({ color, width: 1.5 }, extra || {}), connectgaps: false, name, hovertemplate: tpl });
+  const fs = fillSeries();
+  const base = (x, y, extra) => Object.assign({ x, y, xaxis: 'x', yaxis: 'y', mode: 'lines', connectgaps: false, hoverinfo: 'skip', showlegend: false }, extra);
+  const fillTraces = [
+    base(fs.x[0], fs.y[0], { line: { width: 0 } }),
+    base(fs.x[1], fs.y[1], { line: { width: 0 }, fill: 'tonextx', fillcolor: 'rgba(240,198,52,0.85)' }),
+    base(fs.x[2], fs.y[2], { line: { width: 0 } }),
+    base(fs.x[3], fs.y[3], { line: { width: 0 }, fill: 'tonextx', fillcolor: 'rgba(138,146,157,0.60)' }),
+    base(fs.x[4], fs.y[4], { line: { color: ink, width: 1, dash: 'dot' } }),
+  ];
+  const traces = fillTraces.concat([
+    T('GR', null, '#2e7d4f', 'GR', '%{x:.1f} API<extra>GR</extra>', 'x'),
+    T('RT', null, '#d9822b', 'RT', '%{x:.2f} OHMM<extra>RT</extra>', 'x2'),
+    T('RHOB', null, '#c0392b', 'RHOB', '%{x:.3f} G/CC<extra>RHOB</extra>', 'x3'),
+    T('NPHI', null, '#2b6fd6', 'NPHI', '%{x:.3f} V/V<extra>NPHI</extra>', 'x4', { dash: 'dash' }),
+  ]);
+  const layout = Object.assign({
+    margin: { l: 70, r: 12, t: 78, b: 62 }, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: pbg, showlegend: false, hovermode: 'y unified',
+    font: { color: ink, family: 'IBM Plex Sans, system-ui, sans-serif', size: 11 },
+    yaxis: { range: [view[1], view[0]], title: { text: 'Глубина, м', font: { size: 12 } }, tickformat: '.0f', hoverformat: '.1f', showgrid: true, gridcolor: grid, zeroline: false, showline: true, linecolor: line, mirror: true, ticks: 'outside', minor: { showgrid: true, gridcolor: grid, gridwidth: .5 } },
+    xaxis: ax(0, 'GR, API', { range: [0, grMax], dtick: grMax > 200 ? 100 : 50 }),
+    xaxis2: ax(1, 'RT, OHMM', { type: 'log', range: rtRange }),
+    xaxis3: ax(2, 'RHOB, G/CC', { range: [1.95, 2.95], dtick: .25 }),
+    xaxis4: ax(2, 'NPHI, V/V', { overlaying: 'x3', side: 'bottom', range: [.45, -.15], dtick: .15, showgrid: false }),
+  }, bandLayout());
+  try {
+    if (!$('plot')._fullLayout) $('plot').textContent = '';   // чистим только сообщения; уже нарисованный график трогать нельзя
+    const pr = Plotly.react('plot', traces, layout, { responsive: true, displaylogo: false, scrollZoom: false, modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'] });
+    if (pr && pr.catch) pr.catch(e => showPlotError('Ошибка отрисовки: ' + (e && e.message || e)));
+  } catch (e) { showPlotError('Ошибка отрисовки: ' + e.message); return; }
+  const pe = $('plot');
+  if (pe.on) {
+    if (pe.removeAllListeners) pe.removeAllListeners('plotly_relayout');
+    pe.on('plotly_relayout', ev => { if (ev['yaxis.range[0]'] !== undefined) view = [ev['yaxis.range[1]'], ev['yaxis.range[0]']]; if (ev['yaxis.autorange']) view = [D.depth[0], D.depth[D.depth.length - 1]]; });
+  }
+  renderTable();
+  const miss = CURVES.filter(k => !D.found[k]);
+  $('empty').textContent = miss.length ? 'Нет кривых: ' + miss.join(', ') : '';
+}
+
+/* ---- события ---- */
+$('lasFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const p = parseLAS(await f.text(), f.name); notice(p.warnings, false); setData(p, null); }
+  catch (err) { notice(['Не удалось прочитать файл: ' + err.message], true); }
+  e.target.value = '';
+});
+$('btnExample').addEventListener('click', () => { const p = parseLAS(EXAMPLE_LAS, ''); notice([], false); setData(p, [1590, 1596]); });
+$('btnZoom').addEventListener('click', zoomToInterval);
+$('thr').addEventListener('input', applyThreshold);
+$('btnCsv').addEventListener('click', saveCsv);
+$('btnFull').addEventListener('click', fullView);
+for (const id of ['top', 'base']) {
+  $(id).addEventListener('input', () => updateBand());
+  $(id).addEventListener('keydown', e => { if (e.key === 'Enter') zoomToInterval(); });
+}
+const redraw = () => { if (D) draw(); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw);
+new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+window.__boot = () => setData(parseLAS(EXAMPLE_LAS, ''), [1590, 1596]);
+if (typeof module !== 'undefined') module.exports = { parseLAS };
+
+</script>
+<script>
+/* Загрузка Plotly: cdnjs, при неудаче запасные адреса. Если ничего не загрузилось, страница пишет об этом, а не остаётся пустой. */
+(function () {
+  var urls = [
+    "https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js",
+    "https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"
+  ], i = 0, plot = document.getElementById("plot");
+  plot.textContent = "Загрузка графической библиотеки Plotly…";
+  function ok() { plot.textContent = ""; window.__boot(); }
+  function fail() {
+    plot.textContent = "";
+    var p = document.createElement("p"); p.className = "plot-error";
+    p.textContent = "Не удалось загрузить библиотеку Plotly (cdnjs и jsDelivr недоступны). Проверьте подключение к интернету и сетевые ограничения, затем обновите страницу.";
+    plot.appendChild(p);
+  }
+  function next() {
+    if (window.Plotly) { ok(); return; }
+    if (i >= urls.length) { fail(); return; }
+    var s = document.createElement("script"); s.src = urls[i++];
+    s.onload = function () { window.Plotly ? ok() : next(); }; s.onerror = next;
+    document.head.appendChild(s);
+  }
+  next();
+})();
+</script>
+</body>
+</html>
